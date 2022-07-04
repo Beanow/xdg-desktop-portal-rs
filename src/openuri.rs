@@ -2,32 +2,52 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-use dbus::arg::Variant;
-use dbus::arg::{self, PropMap};
-use dbus::blocking;
+use dbus::{
+  arg::{OwnedFd, PropMap, Variant},
+  blocking::{self, stdintf::org_freedesktop_dbus},
+  Error as DbusError, Path,
+};
+use std::ops::Deref;
 
 const INTERFACE: &'static str = "org.freedesktop.portal.OpenURI";
 
 pub trait OpenURI {
+  /// Asks to open a uri.
+  ///
+  /// Note that `file://` uris are explicitly not supported by this method.
+  /// To request opening local files, use `OpenURI::open_file()`.
+  ///
+  /// `parent_window`: Identifier for the application window, see crate comments for common conventions.
+  /// `uri`: The uri to open
   fn open_uri(
     &self,
     parent_window: &str,
     uri: &str,
     options: OpenURIOptions,
-  ) -> Result<dbus::Path<'static>, dbus::Error>;
+  ) -> Result<Path<'static>, DbusError>;
+
+  ///  Asks to open a local file.
+  ///
+  /// `parent_window`: Identifier for the application window, see crate comments for common conventions.
+  /// `fd`: File descriptor for the file to open.
   fn open_file(
     &self,
     parent_window: &str,
-    fd: arg::OwnedFd,
+    fd: OwnedFd,
     options: OpenURIOptions,
-  ) -> Result<dbus::Path<'static>, dbus::Error>;
+  ) -> Result<Path<'static>, DbusError>;
+
+  ///  Asks to open the directory containing a local file in the file browser.
+  ///
+  /// `parent_window`: Identifier for the application window, see crate comments for common conventions.
+  /// `fd`: File descriptor a file.
   fn open_directory(
     &self,
     parent_window: &str,
-    fd: arg::OwnedFd,
+    fd: OwnedFd,
     options: OpenURIOptions,
-  ) -> Result<dbus::Path<'static>, dbus::Error>;
-  fn version(&self) -> Result<u32, dbus::Error>;
+  ) -> Result<Path<'static>, DbusError>;
+  fn version(&self) -> Result<u32, DbusError>;
 }
 
 #[derive(Default)]
@@ -107,55 +127,53 @@ impl From<OpenURIOptions> for PropMap {
   }
 }
 
-impl<'a, T: blocking::BlockingSender, C: ::std::ops::Deref<Target = T>> OpenURI
-  for blocking::Proxy<'a, C>
-{
+impl<'a, T: blocking::BlockingSender, C: Deref<Target = T>> OpenURI for blocking::Proxy<'a, C> {
   fn open_uri(
     &self,
     parent_window: &str,
     uri: &str,
     options: OpenURIOptions,
-  ) -> Result<dbus::Path<'static>, dbus::Error> {
+  ) -> Result<Path<'static>, DbusError> {
     self
       .method_call(
         INTERFACE,
         "OpenURI",
         (parent_window, uri, PropMap::from(options)),
       )
-      .and_then(|r: (dbus::Path<'static>,)| Ok(r.0))
+      .and_then(|r: (Path<'static>,)| Ok(r.0))
   }
 
   fn open_file(
     &self,
     parent_window: &str,
-    fd: arg::OwnedFd,
+    fd: OwnedFd,
     options: OpenURIOptions,
-  ) -> Result<dbus::Path<'static>, dbus::Error> {
+  ) -> Result<Path<'static>, DbusError> {
     self
       .method_call(
         INTERFACE,
         "OpenFile",
         (parent_window, fd, PropMap::from(options)),
       )
-      .and_then(|r: (dbus::Path<'static>,)| Ok(r.0))
+      .and_then(|r: (Path<'static>,)| Ok(r.0))
   }
 
   fn open_directory(
     &self,
     parent_window: &str,
-    fd: arg::OwnedFd,
+    fd: OwnedFd,
     options: OpenURIOptions,
-  ) -> Result<dbus::Path<'static>, dbus::Error> {
+  ) -> Result<Path<'static>, DbusError> {
     self
       .method_call(
         INTERFACE,
         "OpenDirectory",
         (parent_window, fd, PropMap::from(options)),
       )
-      .and_then(|r: (dbus::Path<'static>,)| Ok(r.0))
+      .and_then(|r: (Path<'static>,)| Ok(r.0))
   }
 
-  fn version(&self) -> Result<u32, dbus::Error> {
-    <Self as blocking::stdintf::org_freedesktop_dbus::Properties>::get(&self, INTERFACE, "version")
+  fn version(&self) -> Result<u32, DbusError> {
+    <Self as org_freedesktop_dbus::Properties>::get(&self, INTERFACE, "version")
   }
 }
