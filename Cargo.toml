@@ -1,0 +1,21 @@
+[package]
+name = "xdg-desktop-portal"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+keywords = [
+  "xdg-desktop-portal",
+  "portals",
+  "libportal",
+  "flatpak",
+  "snaps",
+  "dbus",
+]
+
+[dependencies]
+dbus = "0.9.0"
+
+[features]
+default = ["spec-v4"]
+spec-v3 = []
+spec-v4 = ["spec-v3"]
