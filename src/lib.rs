@@ -9,9 +9,9 @@
 //! Under Wayland, it should have the form "wayland:HANDLE", where HANDLE is a surface handle obtained with the xdg_foreign protocol.
 //! For other windowing systems, or if you don't have a suitable handle, just pass an empty string for "parent_window". 
 
-mod openuri;
+mod open_uri;
 
-pub use openuri::*;
+pub use open_uri::*;
 
 use dbus::blocking::{BlockingSender, Proxy};
 use std::{ops::Deref, time::Duration};
@@ -26,22 +26,4 @@ pub fn new_blocking<'a, B: BlockingSender, C: Deref<Target = B>>(
     timeout,
     connection,
   )
-}
-
-#[cfg(test)]
-mod test {
-  use crate::{new_blocking, OpenURI, OpenURIOptions};
-  use dbus::blocking::Connection;
-  use std::time::Duration;
-
-  #[test]
-  fn hello_test() {
-    let conn = Connection::new_session().unwrap();
-    let timeout = Duration::from_secs(2);
-    let portals = new_blocking(timeout, &conn);
-    let opts = OpenURIOptions::new().ask(true);
-    portals
-      .open_uri("", "https://foo.bar#hello-dbus", opts)
-      .unwrap();
-  }
 }

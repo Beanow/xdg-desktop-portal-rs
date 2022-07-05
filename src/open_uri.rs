@@ -17,8 +17,8 @@ pub trait OpenURI {
   /// Note that `file://` uris are explicitly not supported by this method.
   /// To request opening local files, use `OpenURI::open_file()`.
   ///
-  /// `parent_window`: Identifier for the application window, see crate comments for common conventions.
-  /// `uri`: The uri to open
+  /// - `parent_window`: Identifier for the application window, see crate comments for common conventions.
+  /// - `uri`: The uri to open
   fn open_uri(
     &self,
     parent_window: &str,
@@ -28,8 +28,8 @@ pub trait OpenURI {
 
   ///  Asks to open a local file.
   ///
-  /// `parent_window`: Identifier for the application window, see crate comments for common conventions.
-  /// `fd`: File descriptor for the file to open.
+  /// - `parent_window`: Identifier for the application window, see crate comments for common conventions.
+  /// - `fd`: File descriptor for the file to open.
   fn open_file(
     &self,
     parent_window: &str,
@@ -39,8 +39,8 @@ pub trait OpenURI {
 
   ///  Asks to open the directory containing a local file in the file browser.
   ///
-  /// `parent_window`: Identifier for the application window, see crate comments for common conventions.
-  /// `fd`: File descriptor a file.
+  /// - `parent_window`: Identifier for the application window, see crate comments for common conventions.
+  /// - `fd`: File descriptor a file.
   fn open_directory(
     &self,
     parent_window: &str,
@@ -175,5 +175,25 @@ impl<'a, T: blocking::BlockingSender, C: Deref<Target = T>> OpenURI for blocking
 
   fn version(&self) -> Result<u32, DbusError> {
     <Self as org_freedesktop_dbus::Properties>::get(&self, INTERFACE, "version")
+  }
+}
+
+#[cfg(test)]
+mod test {
+  use super::{OpenURI, OpenURIOptions};
+  use crate::new_blocking;
+  use dbus::blocking::Connection;
+  use std::time::Duration;
+
+  #[test]
+  fn open_uri_ask() {
+    let conn = Connection::new_session().unwrap();
+    let timeout = Duration::from_secs(2);
+    let portals = new_blocking(timeout, &conn);
+
+    let opts = OpenURIOptions::new().ask(true);
+    portals
+      .open_uri("", "https://github.com/tauri-apps/tauri#open_uri_ask", opts)
+      .unwrap();
   }
 }
