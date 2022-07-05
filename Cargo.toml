@@ -14,8 +14,11 @@ keywords = [
 
 [dependencies]
 dbus = "0.9.0"
+thiserror = "1.0.31"
 
 [features]
 default = ["spec-v4"]
-spec-v3 = []
+spec-v1 = []
+spec-v2 = ["spec-v1"]
+spec-v3 = ["spec-v2"]
 spec-v4 = ["spec-v3"]

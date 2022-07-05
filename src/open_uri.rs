@@ -2,15 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
+use crate::PortalError;
+
 use dbus::{
   arg::{OwnedFd, PropMap, Variant},
   blocking::{self, stdintf::org_freedesktop_dbus},
-  Error as DbusError, Path,
+  Path,
 };
-use std::ops::Deref;
 
 const INTERFACE: &'static str = "org.freedesktop.portal.OpenURI";
 
+/// Implementation of the `org.freedesktop.portal.OpenURI` Portal API.
+/// See also https://flatpak.github.io/xdg-desktop-portal/#gdbus-org.freedesktop.portal.OpenURI
 pub trait OpenURI {
   /// Asks to open a uri.
   ///
@@ -24,7 +27,7 @@ pub trait OpenURI {
     parent_window: &str,
     uri: &str,
     options: OpenURIOptions,
-  ) -> Result<Path<'static>, DbusError>;
+  ) -> Result<Path<'static>, PortalError>;
 
   ///  Asks to open a local file.
   ///
@@ -35,7 +38,7 @@ pub trait OpenURI {
     parent_window: &str,
     fd: OwnedFd,
     options: OpenURIOptions,
-  ) -> Result<Path<'static>, DbusError>;
+  ) -> Result<Path<'static>, PortalError>;
 
   ///  Asks to open the directory containing a local file in the file browser.
   ///
@@ -46,10 +49,13 @@ pub trait OpenURI {
     parent_window: &str,
     fd: OwnedFd,
     options: OpenURIOptions,
-  ) -> Result<Path<'static>, DbusError>;
-  fn version(&self) -> Result<u32, DbusError>;
+  ) -> Result<Path<'static>, PortalError>;
+
+  /// Reads the "version" property for this D-Bus interface.
+  fn version(&self) -> Result<u32, PortalError>;
 }
 
+/// Optional arguments for the OpenURI methods.
 #[derive(Default)]
 pub struct OpenURIOptions {
   handle_token: Option<String>,
@@ -61,6 +67,7 @@ pub struct OpenURIOptions {
 }
 
 impl OpenURIOptions {
+  /// Creates a new `OpenURIOptions` struct with no arguments set.
   pub fn new() -> Self {
     Default::default()
   }
@@ -127,13 +134,15 @@ impl From<OpenURIOptions> for PropMap {
   }
 }
 
-impl<'a, T: blocking::BlockingSender, C: Deref<Target = T>> OpenURI for blocking::Proxy<'a, C> {
+impl<'a, T: blocking::BlockingSender, C: std::ops::Deref<Target = T>> OpenURI
+  for blocking::Proxy<'a, C>
+{
   fn open_uri(
     &self,
     parent_window: &str,
     uri: &str,
     options: OpenURIOptions,
-  ) -> Result<Path<'static>, DbusError> {
+  ) -> Result<Path<'static>, PortalError> {
     self
       .method_call(
         INTERFACE,
@@ -141,6 +150,7 @@ impl<'a, T: blocking::BlockingSender, C: Deref<Target = T>> OpenURI for blocking
         (parent_window, uri, PropMap::from(options)),
       )
       .and_then(|r: (Path<'static>,)| Ok(r.0))
+      .map_err(Into::into)
   }
 
   fn open_file(
@@ -148,7 +158,7 @@ impl<'a, T: blocking::BlockingSender, C: Deref<Target = T>> OpenURI for blocking
     parent_window: &str,
     fd: OwnedFd,
     options: OpenURIOptions,
-  ) -> Result<Path<'static>, DbusError> {
+  ) -> Result<Path<'static>, PortalError> {
     self
       .method_call(
         INTERFACE,
@@ -156,6 +166,7 @@ impl<'a, T: blocking::BlockingSender, C: Deref<Target = T>> OpenURI for blocking
         (parent_window, fd, PropMap::from(options)),
       )
       .and_then(|r: (Path<'static>,)| Ok(r.0))
+      .map_err(Into::into)
   }
 
   fn open_directory(
@@ -163,7 +174,7 @@ impl<'a, T: blocking::BlockingSender, C: Deref<Target = T>> OpenURI for blocking
     parent_window: &str,
     fd: OwnedFd,
     options: OpenURIOptions,
-  ) -> Result<Path<'static>, DbusError> {
+  ) -> Result<Path<'static>, PortalError> {
     self
       .method_call(
         INTERFACE,
@@ -171,10 +182,11 @@ impl<'a, T: blocking::BlockingSender, C: Deref<Target = T>> OpenURI for blocking
         (parent_window, fd, PropMap::from(options)),
       )
       .and_then(|r: (Path<'static>,)| Ok(r.0))
+      .map_err(Into::into)
   }
 
-  fn version(&self) -> Result<u32, DbusError> {
-    <Self as org_freedesktop_dbus::Properties>::get(&self, INTERFACE, "version")
+  fn version(&self) -> Result<u32, PortalError> {
+    <Self as org_freedesktop_dbus::Properties>::get(&self, INTERFACE, "version").map_err(Into::into)
   }
 }
 
