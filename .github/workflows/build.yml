@@ -21,6 +21,12 @@ jobs:
           toolchain: stable
           target: ${{ matrix.platform.target }}
 
+      - name: install libraries
+        if: matrix.platform.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libdbus-1-dev dbus at-spi2-core
+
       - name: Get current date
         run: echo "CURRENT_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
 
@@ -38,7 +44,7 @@ jobs:
       - name: Cache cargo index
         uses: actions/cache@v2.1.4
         with:
-          path: ~/.cargo/git
+          path: ~/.cargo/registry
           # Add date to the cache to keep it up to date
           key: ${{ matrix.platform }}-stable-cargo-index-${{ hashFiles('Cargo.toml') }}-${{ env.CURRENT_DATE }}
           # Restore from outdated cache for speed
@@ -67,4 +73,6 @@ jobs:
         run: cargo build --target ${{ matrix.platform.target }}
 
       - name: build and run tests
-        run: cargo test --verbose --target ${{ matrix.platform.target }}
+        run: |
+          export DBUS_SESSION_BUS_ADDRESS=`dbus-daemon --session --print-address --fork`
+          cargo test --verbose --target ${{ matrix.platform.target }}
